@@ -1,4 +1,12 @@
 import { redirect } from '@sveltejs/kit';
+import {
+	API_ENDPOINT,
+	API_KEY,
+	HTTP_STATUS,
+	REFRESH_TOKEN,
+	REFRESH_TOKEN_EXPIRES,
+	TOKEN
+} from '$lib/constants/auth';
 import type { Actions } from './$types';
 
 interface LoginActionResponse {
@@ -40,17 +48,17 @@ export const actions = {
 			return response;
 		}
 
-		const signInResponse = await fetch('https://cms-api.doinstruct-test.com/auth/sign-in', {
+		const signInResponse = await fetch(`${API_ENDPOINT}auth/sign-in`, {
 			method: 'POST',
 			headers: new Headers({
 				Accept: 'application/json',
 				'Content-Type': 'application/json',
-				'X-API-KEY': 'qEf_nbRNoUJYidPpUc0knTZ2fi2un4fveGGZSQTI8j4'
+				'X-API-KEY': API_KEY
 			}),
 
 			body: JSON.stringify({ email, password })
 		});
-		if (signInResponse.status !== 200) {
+		if (signInResponse.status !== HTTP_STATUS.OK) {
 			response.success = false;
 			response.errors.email = '';
 			response.errors.password = '';
@@ -60,15 +68,23 @@ export const actions = {
 
 		let signInResponseData = await signInResponse.json();
 
-		cookies.set('token', signInResponseData.token, {
+		cookies.set(TOKEN, signInResponseData.token, {
 			path: '/',
 			httpOnly: true,
 			secure: true,
 			sameSite: 'lax',
 			maxAge: signInResponseData.expiresIn
 		});
+
+		cookies.set(REFRESH_TOKEN, signInResponseData.refreshToken, {
+			path: '/',
+			httpOnly: true,
+			secure: true,
+			sameSite: 'lax',
+			maxAge: REFRESH_TOKEN_EXPIRES
+		});
 		if (response.success) {
-			throw redirect(303, '/employees');
+			throw redirect(HTTP_STATUS.SEE_OTHER, '/employees');
 		}
 	}
 } satisfies Actions;
